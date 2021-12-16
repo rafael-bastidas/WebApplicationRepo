@@ -12,6 +12,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
@@ -21,6 +23,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.jsp.PageContext;
+import modelo.DataFollow;
 import modelo.DataRepositorie;
 import modelo.DataRepositories;
 import modelo.DataUser;
@@ -44,6 +47,8 @@ public class SessionController extends HttpServlet {
         
         if (accion.equals("deleteUser")) {
             deleteUser(request, response);
+        } else if (accion.equals("cerrarPerfil")) {
+            cerrarPerfil(request, response);
         }
     }
 
@@ -64,8 +69,14 @@ public class SessionController extends HttpServlet {
             //request.setAttribute("dataUser", dataUser);
             ServletContext application = this.getServletContext();
             application.setAttribute("dataUser", dataUser);
+            
             List<DataRepositories> listarepositories = listarRepositories(dataUser.getIdusers());
             request.setAttribute("listaRepositories", listarepositories);
+            
+            List<DataFollow> listFollow = getListOfFollow(dataUser.getIdusers());
+            request.setAttribute("listFollow", listFollow);
+            List<DataFollow> listFollowers = getListOfFollowers(dataUser.getIdusers());
+            request.setAttribute("listFollowers", listFollowers);
         } else {
             dispatcher = request.getRequestDispatcher("index.jsp");
             request.setAttribute("user", user);
@@ -82,6 +93,17 @@ public class SessionController extends HttpServlet {
         return "Short description";
     }// </editor-fold>
 
+    
+    public void cerrarPerfil(HttpServletRequest request, HttpServletResponse response)
+        throws ServletException, IOException{
+        
+        ServletContext application = this.getServletContext();
+        application.removeAttribute("dataUser");
+        
+        RequestDispatcher dispatcher = request.getRequestDispatcher("index.jsp");
+        dispatcher.forward(request, response);
+    }
+    
     public void deleteUser(HttpServletRequest request, HttpServletResponse response)
         throws ServletException, IOException{
         
@@ -94,7 +116,10 @@ public class SessionController extends HttpServlet {
         if (!validDelete) {
             request.setAttribute("message", "No se pudo eliminar la cuenta de usuario");
         }
-                        
+               
+        ServletContext application = this.getServletContext();
+        application.removeAttribute("dataUser");
+        
         dispatcher = request.getRequestDispatcher("index.jsp");
         dispatcher.forward(request, response);
     }
@@ -129,6 +154,12 @@ public class SessionController extends HttpServlet {
         } catch(SQLException e) {
             System.out.println(e.toString());
             return null;
+        } finally {
+            try {
+                conexion.close();
+            } catch (SQLException ex) {
+                Logger.getLogger(DataUserController.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
         
     }
@@ -146,6 +177,78 @@ public class SessionController extends HttpServlet {
         } catch(SQLException e) {
             System.out.println(e.toString());
             return false;
+        } finally {
+            try {
+                conexion.close();
+            } catch (SQLException ex) {
+                Logger.getLogger(DataUserController.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+    }
+    
+    public List<DataFollow> getListOfFollow(int _id){
+        Connection conexion = establecerConexionDB();
+        PreparedStatement ps;
+        ResultSet rs;
+        List<DataFollow> lista = new ArrayList<>();
+        
+        try {
+            ps = conexion.prepareStatement("SELECT users.idusers, users.user, follow.idfollow from users inner join follow on users.idusers = follow.idusersdest where follow.idusersorigin=?");
+            ps.setInt(1, _id);
+            rs = ps.executeQuery();
+            
+            while(rs.next()){
+                int idfollow = rs.getInt("idfollow");
+                int idusers = rs.getInt("idusers");
+                String user = rs.getString("user");
+                
+                DataFollow dataFollow = new DataFollow(idfollow,idusers,user);
+                lista.add(dataFollow);
+            }
+            
+            return lista;
+        } catch(SQLException e) {
+            System.out.println(e.toString());
+            return null;
+        } finally {
+            try {
+                conexion.close();
+            } catch (SQLException ex) {
+                Logger.getLogger(DataUserController.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+    }
+    
+    public List<DataFollow> getListOfFollowers(int _id){
+        Connection conexion = establecerConexionDB();
+        PreparedStatement ps;
+        ResultSet rs;
+        List<DataFollow> lista = new ArrayList<>();
+        
+        try {
+            ps = conexion.prepareStatement("SELECT users.idusers, users.user, follow.idfollow from users inner join follow on users.idusers = follow.idusersorigin where follow.idusersdest=?");
+            ps.setInt(1, _id);
+            rs = ps.executeQuery();
+            
+            while(rs.next()){
+                int idfollow = rs.getInt("idfollow");
+                int idusers = rs.getInt("idusers");
+                String user = rs.getString("user");
+                
+                DataFollow dataFollow = new DataFollow(idfollow,idusers,user);
+                lista.add(dataFollow);
+            }
+            
+            return lista;
+        } catch(SQLException e) {
+            System.out.println(e.toString());
+            return null;
+        } finally {
+            try {
+                conexion.close();
+            } catch (SQLException ex) {
+                Logger.getLogger(DataUserController.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
     }
     

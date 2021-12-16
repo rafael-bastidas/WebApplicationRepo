@@ -20,10 +20,11 @@ public class Conexion {
         
         try{
             Class.forName("com.mysql.cj.jdbc.Driver");
-            Connection conexion = DriverManager.getConnection("jdbc:mysql://localhost/rafaelba_repo", "root", "admin");
+            Connection conexion = DriverManager.getConnection("jdbc:mysql://bfhbxriumysvx17kbyus-mysql.services.clever-cloud.com/bfhbxriumysvx17kbyus", "uzqrd2jf7vblttv2", "ok3L8EkkqRejiyJUmYaF");
+            //Connection conexion = DriverManager.getConnection("jdbc:mysql://localhost/rafaelba_repo", "root", "admin");
             return conexion;
         }catch(SQLException e) {
-            System.out.println(e.toString());
+            System.out.println("Error de conexion"+e.toString());
             return null;
         } catch (ClassNotFoundException ex) {
             Logger.getLogger(Conexion.class.getName()).log(Level.SEVERE, null, ex);

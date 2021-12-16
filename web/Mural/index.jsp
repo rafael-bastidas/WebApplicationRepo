@@ -41,8 +41,8 @@
                         Usuario
                     </button>
                     <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1" style="left: auto; right: 0;">
-                        <li><a class="dropdown-item" href="Home/index.jsp">Mi perfil</a></li>
-                        <li><a class="dropdown-item" href="index.jsp">Cerrar sesión</a></li>
+                        <li><a class="dropdown-item" href="RepositoriesController?accion=irMiPerfil&idusers=<%=dataUser.getIdusers()%>">Mi perfil</a></li>
+                        <li><a class="dropdown-item" href="SessionController?accion=cerrarPerfil">Cerrar sesión</a></li>
                     </ul>
                 </div>
             </div>
@@ -62,7 +62,7 @@
                             <p class="card-text">${element.tags}</p>
                             <div class="d-flex justify-content-end">
                                 <a href="RepositoriesController?accion=likes&idrepositorie=${element.idrepositorie}" class="btn btn-primary btn-sm">(${element.likes}) Likes</a>
-                                <a href="#" class="btn btn-danger btn-sm ms-1">Ver perfil</a>
+                                <a href="RepositoriesController?accion=verPerfilDest&idusersdest=${element.idusers}" class="btn btn-danger btn-sm ms-1">Ver perfil</a>
                             </div>
                         </div>
                     </div>
@@ -82,7 +82,7 @@
             }
 
             <c:if test="${dataUser == null}">
-            window.location.href = raiz_url + "/WebApplicationRepo/"
+                window.location.href = raiz_url + "/WebApplicationRepo/"
             </c:if>
         </script>
     </body>

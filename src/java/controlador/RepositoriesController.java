@@ -6,7 +6,6 @@ package controlador;
 
 import config.Conexion;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -14,15 +13,21 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.servlet.RequestDispatcher;
+import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import modelo.DataFollow;
 import modelo.DataRepositorie;
 import modelo.DataRepositories;
+import modelo.DataUser;
 import modelo.DatoMural;
+import modelo.InitSession;
 
 /**
  *
@@ -42,12 +47,20 @@ public class RepositoriesController extends HttpServlet {
             deleteRepo(request, response);
         } else if (accion.equals("verrepo")) {
             verRepo(request, response);
+        } else if (accion.equals("verRepoDest")) {
+            verRepoDest(request, response);
         } else if (accion.equals("deleteImgFromRepositorie")) {
             deleteImgFromRepositorie(request, response);
         } else if (accion.equals("updateMural")) {
             updateMural(request, response);
         } else if (accion.equals("likes")) {
             configLike(request, response);
+        } else if (accion.equals("irMiPerfil")) {
+            irMiPerfil(request, response);
+        } else if (accion.equals("verPerfilDest")) {
+            verPerfilDest(request, response);
+        } else if (accion.equals("followUser")) {
+            followUser(request, response);
         } else {
            System.out.println("No entro "); 
         }
@@ -81,6 +94,75 @@ public class RepositoriesController extends HttpServlet {
         return "Short description";
     }// </editor-fold>
     
+    
+    public void followUser(HttpServletRequest request, HttpServletResponse response)
+        throws ServletException, IOException{
+        
+        int idusersdest = Integer.parseInt(request.getParameter("idusersdest"));
+        ServletContext application = this.getServletContext();
+        DataUser dataUserOrigin = (DataUser) application.getAttribute("dataUser");
+        System.out.println("idusersOrigin "+ dataUserOrigin.getIdusers() + " sigue a idusersDest " + idusersdest);
+        
+        //DataFollow dataFollow = new DataFollow(0, dataUserOrigin.getIdusers(), dataUserOrigin.getUser(), idusersdest, "");
+        boolean validFollow = validarFollow(dataUserOrigin.getIdusers(),idusersdest);
+        
+        if (!validFollow) {
+            insertarFollow(dataUserOrigin.getIdusers(),idusersdest);
+            request.setAttribute("validFollow", true);
+        } else {
+            deleteFollow(dataUserOrigin.getIdusers(),idusersdest);
+            request.setAttribute("validFollow", false);
+        }
+        
+        List<DataRepositories> listarepositories = listarRepositories(idusersdest);
+        request.setAttribute("listaRepositories", listarepositories);
+        
+        RequestDispatcher dispatcher = request.getRequestDispatcher("Perfil/index.jsp");
+        dispatcher.forward(request, response);
+    }
+    
+    public void verPerfilDest(HttpServletRequest request, HttpServletResponse response)
+        throws ServletException, IOException{
+        
+        ServletContext application = this.getServletContext();
+        int idusersdest = Integer.parseInt(request.getParameter("idusersdest"));
+        DataUser dataUserOrigin = (DataUser) application.getAttribute("dataUser");
+        System.out.println("Ver perfil de destino idusersDest "+idusersdest+" Desde idOrigin "+dataUserOrigin.getIdusers());
+        
+        boolean validFollow = validarFollow(dataUserOrigin.getIdusers(),idusersdest);
+        System.out.println("Result validFollow "+validFollow);
+        request.setAttribute("validFollow", validFollow);
+        
+        List<DataRepositories> listarepositories = listarRepositories(idusersdest);
+        request.setAttribute("listaRepositories", listarepositories);
+        
+        InitSession initSession = new InitSession();
+        DataUser dataUserDest = initSession.getUserByIdusers(idusersdest);
+        application = this.getServletContext();
+        application.setAttribute("dataUserDest", dataUserDest);
+        
+        RequestDispatcher dispatcher = request.getRequestDispatcher("Perfil/index.jsp");
+        dispatcher.forward(request, response);
+    }
+            
+    
+    public void irMiPerfil(HttpServletRequest request, HttpServletResponse response)
+        throws ServletException, IOException{
+        
+        int idusers = Integer.parseInt(request.getParameter("idusers"));
+        System.out.println("Retornando al perfil de idusers "+idusers);
+        
+        List<DataRepositories> listarepositories = listarRepositories(idusers);
+        request.setAttribute("listaRepositories", listarepositories);
+        
+        List<DataFollow> listFollow = getListOfFollow(idusers);
+        request.setAttribute("listFollow", listFollow);
+        List<DataFollow> listFollowers = getListOfFollowers(idusers);
+        request.setAttribute("listFollowers", listFollowers);
+        
+        RequestDispatcher dispatcher = request.getRequestDispatcher("Home/index.jsp");
+        dispatcher.forward(request, response);
+    }
     
     public void searchTags(HttpServletRequest request, HttpServletResponse response)
         throws ServletException, IOException{
@@ -148,6 +230,11 @@ public class RepositoriesController extends HttpServlet {
         
         List<DataRepositorie> listaRepositorie = getListRepositorieByIdrepositories(idrepositories);
         request.setAttribute("listaRepositorieSelect", listaRepositorie);
+        
+        List<DataFollow> listFollow = getListOfFollow(idusers);
+        request.setAttribute("listFollow", listFollow);
+        List<DataFollow> listFollowers = getListOfFollowers(idusers);
+        request.setAttribute("listFollowers", listFollowers);
                         
         dispatcher = request.getRequestDispatcher("Home/index.jsp");
         dispatcher.forward(request, response);
@@ -164,7 +251,7 @@ public class RepositoriesController extends HttpServlet {
         String imagen = request.getParameter("imagen");
         System.out.println("dataRepositorie: idrepositorie "+idrepositorie+" idrepositories "+idrepositories+" idusers "+idusers+" tags "+tags+" imagen "+imagen);
         
-        DataRepositorie dataRepositorie = new DataRepositorie(idrepositorie,idrepositories,tags,imagen);
+        DataRepositorie dataRepositorie = new DataRepositorie(idrepositorie,idrepositories,tags,imagen,0);
         boolean validInsertarUpdate = true;
         if (idrepositorie == 0) {
             validInsertarUpdate = insertarImagenEnRepositorie(dataRepositorie);
@@ -184,6 +271,11 @@ public class RepositoriesController extends HttpServlet {
             
         List<DataRepositories> listarepositories = listarRepositories(idusers);
         request.setAttribute("listaRepositories", listarepositories);
+        
+        List<DataFollow> listFollow = getListOfFollow(idusers);
+        request.setAttribute("listFollow", listFollow);
+        List<DataFollow> listFollowers = getListOfFollowers(idusers);
+        request.setAttribute("listFollowers", listFollowers);
         
         dispatcher = request.getRequestDispatcher("Home/index.jsp");
         dispatcher.forward(request, response);
@@ -207,7 +299,40 @@ public class RepositoriesController extends HttpServlet {
         List<DataRepositorie> listaRepositorie = getListRepositorieByIdrepositories(idrepositories);
         request.setAttribute("listaRepositorieSelect", listaRepositorie);
         
+        List<DataFollow> listFollow = getListOfFollow(dataRepositories.getIdusers());
+        request.setAttribute("listFollow", listFollow);
+        List<DataFollow> listFollowers = getListOfFollowers(dataRepositories.getIdusers());
+        request.setAttribute("listFollowers", listFollowers);
+        
         dispatcher = request.getRequestDispatcher("Home/index.jsp");
+        dispatcher.forward(request, response);
+    }
+    
+    
+    public void verRepoDest(HttpServletRequest request, HttpServletResponse response)
+        throws ServletException, IOException{
+        
+        RequestDispatcher dispatcher = null;
+        int idrepositories = Integer.parseInt(request.getParameter("idrepositories"));
+        System.out.println("ver repo dest idrepositories "+idrepositories);
+        
+        
+        DataRepositories dataRepositories = getRepositoriesByIdrepositories(idrepositories);
+        request.setAttribute("dataRepositoriesSelect", dataRepositories);
+        
+        List<DataRepositories> listarepositories = listarRepositories(dataRepositories.getIdusers());
+        request.setAttribute("listaRepositories", listarepositories);
+        
+        List<DataRepositorie> listaRepositorie = getListRepositorieByIdrepositories(idrepositories);
+        request.setAttribute("listaRepositorieSelect", listaRepositorie);
+        
+        ServletContext application = this.getServletContext();
+        DataUser dataUserOrigin = (DataUser) application.getAttribute("dataUser");
+        boolean validFollow = validarFollow(dataUserOrigin.getIdusers(),dataRepositories.getIdusers());
+        System.out.println("Result validFollow "+validFollow);
+        request.setAttribute("validFollow", validFollow);
+        
+        dispatcher = request.getRequestDispatcher("Perfil/index.jsp");
         dispatcher.forward(request, response);
     }
             
@@ -228,6 +353,11 @@ public class RepositoriesController extends HttpServlet {
         } else {
             request.setAttribute("message", "No se pudo eliminar el repositorio");
         }
+        
+        List<DataFollow> listFollow = getListOfFollow(idusers);
+        request.setAttribute("listFollow", listFollow);
+        List<DataFollow> listFollowers = getListOfFollowers(idusers);
+        request.setAttribute("listFollowers", listFollowers);
         
         dispatcher = request.getRequestDispatcher("Home/index.jsp");
         dispatcher.forward(request, response);
@@ -250,13 +380,96 @@ public class RepositoriesController extends HttpServlet {
             request.setAttribute("message", "No se pudo crear el repositorio");
         }
         
+        List<DataFollow> listFollow = getListOfFollow(idusers);
+        request.setAttribute("listFollow", listFollow);
+        List<DataFollow> listFollowers = getListOfFollowers(idusers);
+        request.setAttribute("listFollowers", listFollowers);
+        
         dispatcher = request.getRequestDispatcher("Home/index.jsp");
         dispatcher.forward(request, response);
     }
     
+    
+    
+    
     public Connection establecerConexionDB() {
         Conexion con = new Conexion();
         return con.getConexion();
+    }
+    
+    public boolean deleteFollow(int _idOrigin, int _idDest){
+        Connection conexion = establecerConexionDB();
+        PreparedStatement ps;
+
+        try {
+            ps = conexion.prepareStatement("DELETE FROM follow WHERE idusersorigin=? AND idusersdest=?");
+            ps.setInt(1, _idOrigin);
+            ps.setInt(2, _idDest);
+            ps.execute();
+            
+            return true;
+        } catch (SQLException e) {
+            System.out.println(e.toString());
+            return false;
+        } finally {
+            try {
+                conexion.close();
+            } catch (SQLException ex) {
+                Logger.getLogger(DataUserController.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+    }
+            
+    public boolean insertarFollow(int _idOrigin, int _idDest){
+        Connection conexion = establecerConexionDB();
+        PreparedStatement ps;
+
+        try {
+            ps = conexion.prepareStatement("INSERT INTO follow (idusersorigin, idusersdest) VALUES (?,?)");
+            ps.setInt(1, _idOrigin);
+            ps.setInt(2, _idDest);
+            ps.execute();
+            
+            return true;
+        } catch (SQLException e) {
+            System.out.println(e.toString());
+            return false;
+        } finally {
+            try {
+                conexion.close();
+            } catch (SQLException ex) {
+                Logger.getLogger(DataUserController.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+    }
+    
+    public boolean validarFollow (int _idOrigin, int _idDest){
+        Connection conexion = establecerConexionDB();
+        PreparedStatement ps;
+        ResultSet rs;
+        
+        try {
+            ps = conexion.prepareStatement("SELECT * FROM follow WHERE idusersorigin=? AND idusersdest=?");
+            ps.setInt(1, _idOrigin);
+            ps.setInt(2, _idDest);
+            rs = ps.executeQuery();
+            
+            if(rs.next()){
+                return true;
+            } else {
+                return false;
+            }
+            
+        } catch(SQLException e) {
+            System.out.println(e.toString());
+            return false;
+        } finally {
+            try {
+                conexion.close();
+            } catch (SQLException ex) {
+                Logger.getLogger(DataUserController.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
     }
     
     public int insertar(DataRepositories dataRepositories) {
@@ -284,6 +497,12 @@ public class RepositoriesController extends HttpServlet {
         } catch (SQLException e) {
             System.out.println(e.toString());
             return 0;
+        } finally {
+            try {
+                conexion.close();
+            } catch (SQLException ex) {
+                Logger.getLogger(DataUserController.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
 
     }
@@ -302,6 +521,12 @@ public class RepositoriesController extends HttpServlet {
         } catch(SQLException e) {
             System.out.println("Error 130"+e.toString());
             return false;
+        } finally {
+            try {
+                conexion.close();
+            } catch (SQLException ex) {
+                Logger.getLogger(DataUserController.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
     }
     
@@ -330,6 +555,12 @@ public class RepositoriesController extends HttpServlet {
         } catch(SQLException e) {
             System.out.println(e.toString());
             return null;
+        } finally {
+            try {
+                conexion.close();
+            } catch (SQLException ex) {
+                Logger.getLogger(DataUserController.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
         
     }
@@ -361,6 +592,12 @@ public class RepositoriesController extends HttpServlet {
         } catch(SQLException e) {
             System.out.println(e.toString());
             return null;
+        } finally {
+            try {
+                conexion.close();
+            } catch (SQLException ex) {
+                Logger.getLogger(DataUserController.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
     }
     
@@ -394,6 +631,12 @@ public class RepositoriesController extends HttpServlet {
         } catch(SQLException e) {
             System.out.println("line 394 "+e.toString());
             return null;
+        } finally {
+            try {
+                conexion.close();
+            } catch (SQLException ex) {
+                Logger.getLogger(DataUserController.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
     }
     
@@ -411,6 +654,12 @@ public class RepositoriesController extends HttpServlet {
         } catch(SQLException e) {
             System.out.println(e.toString());
             return false;
+        } finally {
+            try {
+                conexion.close();
+            } catch (SQLException ex) {
+                Logger.getLogger(DataUserController.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
         
     }
@@ -432,8 +681,9 @@ public class RepositoriesController extends HttpServlet {
                 int idrepositories = rs.getInt("idrepositories");
                 String tags = rs.getString("tags");
                 String imagen = rs.getString("imagen");
+                int likes = rs.getInt("likes");
                 
-                DataRepositorie dataRepositorie = new DataRepositorie(idrepositorie,idrepositories,tags,imagen);
+                DataRepositorie dataRepositorie = new DataRepositorie(idrepositorie,idrepositories,tags,imagen,likes);
                 lista.add(dataRepositorie);
             }
             
@@ -441,6 +691,12 @@ public class RepositoriesController extends HttpServlet {
         } catch(SQLException e) {
             System.out.println(e.toString());
             return null;
+        } finally {
+            try {
+                conexion.close();
+            } catch (SQLException ex) {
+                Logger.getLogger(DataUserController.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
     }
 
@@ -468,6 +724,12 @@ public class RepositoriesController extends HttpServlet {
         } catch(SQLException e) {
             System.out.println(e.toString());
             return null;
+        } finally {
+            try {
+                conexion.close();
+            } catch (SQLException ex) {
+                Logger.getLogger(DataUserController.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
     }
     
@@ -476,7 +738,7 @@ public class RepositoriesController extends HttpServlet {
         PreparedStatement ps;
 
         try {
-            ps = conexion.prepareStatement("INSERT INTO repositorie ( idrepositories, tags, imagen ) VALUES (?,?,?)");
+            ps = conexion.prepareStatement("INSERT INTO repositorie ( idrepositories, tags, imagen, likes ) VALUES (?,?,?,0)");
             ps.setInt(1, dataRepositorie.getIdrepositories());
             ps.setString(2, dataRepositorie.getTags());
             ps.setString(3, dataRepositorie.getImagen());
@@ -486,6 +748,12 @@ public class RepositoriesController extends HttpServlet {
         } catch (SQLException e) {
             System.out.println(e.toString());
             return false;
+        } finally {
+            try {
+                conexion.close();
+            } catch (SQLException ex) {
+                Logger.getLogger(DataUserController.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
     }
     
@@ -505,6 +773,12 @@ public class RepositoriesController extends HttpServlet {
         } catch (SQLException e) {
             System.out.println(e.toString());
             return false;
+        } finally {
+            try {
+                conexion.close();
+            } catch (SQLException ex) {
+                Logger.getLogger(DataUserController.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
     }
     
@@ -521,6 +795,12 @@ public class RepositoriesController extends HttpServlet {
         } catch(SQLException e) {
             System.out.println(e.toString());
             return false;
+        } finally {
+            try {
+                conexion.close();
+            } catch (SQLException ex) {
+                Logger.getLogger(DataUserController.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
     }
     
@@ -549,6 +829,12 @@ public class RepositoriesController extends HttpServlet {
         } catch(SQLException e) {
             System.out.println(e.toString());
             return null;
+        } finally {
+            try {
+                conexion.close();
+            } catch (SQLException ex) {
+                Logger.getLogger(DataUserController.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
     }
     
@@ -566,6 +852,78 @@ public class RepositoriesController extends HttpServlet {
         } catch (SQLException e) {
             System.out.println(e.toString());
             return false;
+        } finally {
+            try {
+                conexion.close();
+            } catch (SQLException ex) {
+                Logger.getLogger(DataUserController.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+    }
+    
+    public List<DataFollow> getListOfFollow(int _id){
+        Connection conexion = establecerConexionDB();
+        PreparedStatement ps;
+        ResultSet rs;
+        List<DataFollow> lista = new ArrayList<>();
+        
+        try {
+            ps = conexion.prepareStatement("SELECT users.idusers, users.user, follow.idfollow from users inner join follow on users.idusers = follow.idusersdest where follow.idusersorigin=?");
+            ps.setInt(1, _id);
+            rs = ps.executeQuery();
+            
+            while(rs.next()){
+                int idfollow = rs.getInt("idfollow");
+                int idusers = rs.getInt("idusers");
+                String user = rs.getString("user");
+                
+                DataFollow dataFollow = new DataFollow(idfollow,idusers,user);
+                lista.add(dataFollow);
+            }
+            
+            return lista;
+        } catch(SQLException e) {
+            System.out.println(e.toString());
+            return null;
+        } finally {
+            try {
+                conexion.close();
+            } catch (SQLException ex) {
+                Logger.getLogger(DataUserController.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+    }
+    
+    public List<DataFollow> getListOfFollowers(int _id){
+        Connection conexion = establecerConexionDB();
+        PreparedStatement ps;
+        ResultSet rs;
+        List<DataFollow> lista = new ArrayList<>();
+        
+        try {
+            ps = conexion.prepareStatement("SELECT users.idusers, users.user, follow.idfollow from users inner join follow on users.idusers = follow.idusersorigin where follow.idusersdest=?");
+            ps.setInt(1, _id);
+            rs = ps.executeQuery();
+            
+            while(rs.next()){
+                int idfollow = rs.getInt("idfollow");
+                int idusers = rs.getInt("idusers");
+                String user = rs.getString("user");
+                
+                DataFollow dataFollow = new DataFollow(idfollow,idusers,user);
+                lista.add(dataFollow);
+            }
+            
+            return lista;
+        } catch(SQLException e) {
+            System.out.println(e.toString());
+            return null;
+        } finally {
+            try {
+                conexion.close();
+            } catch (SQLException ex) {
+                Logger.getLogger(DataUserController.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
     }
     

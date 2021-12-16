@@ -13,6 +13,8 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
@@ -20,6 +22,7 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import modelo.DataFollow;
 import modelo.DataRepositories;
 import modelo.DataUser;
 import modelo.Prueba;
@@ -40,7 +43,7 @@ public class DataUserController extends HttpServlet {
         int idusers = Integer.parseInt(request.getParameter("idusers"));
 
         DataUser dataUser = getUserByIdusers(idusers);
-        
+
         dispatcher = request.getRequestDispatcher("Register/index.jsp");
         request.setAttribute("dataUser", dataUser);
         dispatcher.forward(request, response);
@@ -75,6 +78,11 @@ public class DataUserController extends HttpServlet {
             actualizar(dataUser);
             List<DataRepositories> listarepositories = listarRepositories(dataUser.getIdusers());
             request.setAttribute("listaRepositories", listarepositories);
+            
+            List<DataFollow> listFollow = getListOfFollow(dataUser.getIdusers());
+            request.setAttribute("listFollow", listFollow);
+            List<DataFollow> listFollowers = getListOfFollowers(dataUser.getIdusers());
+            request.setAttribute("listFollowers", listFollowers);
         }
 
         dispatcher = request.getRequestDispatcher(path);
@@ -89,6 +97,8 @@ public class DataUserController extends HttpServlet {
         return "Short description";
     }// </editor-fold>
 
+    
+    
     public Connection establecerConexionDB() {
         Conexion con = new Conexion();
         return con.getConexion();
@@ -121,6 +131,12 @@ public class DataUserController extends HttpServlet {
         } catch (SQLException e) {
             System.out.println(e.toString());
             return 0;
+        } finally {
+            try {
+                conexion.close();
+            } catch (SQLException ex) {
+                Logger.getLogger(DataUserController.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
 
     }
@@ -143,6 +159,12 @@ public class DataUserController extends HttpServlet {
         } catch (SQLException e) {
             System.out.println(e.toString());
             return false;
+        } finally {
+            try {
+                conexion.close();
+            } catch (SQLException ex) {
+                Logger.getLogger(DataUserController.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
 
     }
@@ -162,6 +184,12 @@ public class DataUserController extends HttpServlet {
         } catch (SQLException e) {
             System.out.println("Line 145 " + e.toString());
             return false;
+        } finally {
+            try {
+                conexion.close();
+            } catch (SQLException ex) {
+                Logger.getLogger(DataUserController.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
 
     }
@@ -193,36 +221,114 @@ public class DataUserController extends HttpServlet {
         } catch (SQLException e) {
             System.out.println(e.toString());
             return null;
+        } finally {
+            try {
+                conexion.close();
+            } catch (SQLException ex) {
+                Logger.getLogger(DataUserController.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
 
     }
-    
-    public List<DataRepositories> listarRepositories(int _id){
+
+    public List<DataRepositories> listarRepositories(int _id) {
         Connection conexion = establecerConexionDB();
         PreparedStatement ps;
         ResultSet rs;
         List<DataRepositories> lista = new ArrayList<>();
-        
+
         try {
             ps = conexion.prepareStatement("SELECT * FROM repositories WHERE idusers=?");
             ps.setInt(1, _id);
             rs = ps.executeQuery();
-            
-            while(rs.next()){
-                
+
+            while (rs.next()) {
+
                 int id = rs.getInt("idrepositories");
                 int idusers = rs.getInt("idusers");
                 String namerepo = rs.getString("namerepo");
-                
-                DataRepositories dataRepositories = new DataRepositories(id,idusers,namerepo);
+
+                DataRepositories dataRepositories = new DataRepositories(id, idusers, namerepo);
                 lista.add(dataRepositories);
+            }
+
+            return lista;
+        } catch (SQLException e) {
+            System.out.println(e.toString());
+            return null;
+        } finally {
+            try {
+                conexion.close();
+            } catch (SQLException ex) {
+                Logger.getLogger(DataUserController.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+
+    }
+    
+    public List<DataFollow> getListOfFollow(int _id){
+        Connection conexion = establecerConexionDB();
+        PreparedStatement ps;
+        ResultSet rs;
+        List<DataFollow> lista = new ArrayList<>();
+        
+        try {
+            ps = conexion.prepareStatement("SELECT users.idusers, users.user, follow.idfollow from users inner join follow on users.idusers = follow.idusersdest where follow.idusersorigin=?");
+            ps.setInt(1, _id);
+            rs = ps.executeQuery();
+            
+            while(rs.next()){
+                int idfollow = rs.getInt("idfollow");
+                int idusers = rs.getInt("idusers");
+                String user = rs.getString("user");
+                
+                DataFollow dataFollow = new DataFollow(idfollow,idusers,user);
+                lista.add(dataFollow);
             }
             
             return lista;
         } catch(SQLException e) {
             System.out.println(e.toString());
             return null;
+        } finally {
+            try {
+                conexion.close();
+            } catch (SQLException ex) {
+                Logger.getLogger(DataUserController.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
+    }
+    
+    public List<DataFollow> getListOfFollowers(int _id){
+        Connection conexion = establecerConexionDB();
+        PreparedStatement ps;
+        ResultSet rs;
+        List<DataFollow> lista = new ArrayList<>();
         
+        try {
+            ps = conexion.prepareStatement("SELECT users.idusers, users.user, follow.idfollow from users inner join follow on users.idusers = follow.idusersorigin where follow.idusersdest=?");
+            ps.setInt(1, _id);
+            rs = ps.executeQuery();
+            
+            while(rs.next()){
+                int idfollow = rs.getInt("idfollow");
+                int idusers = rs.getInt("idusers");
+                String user = rs.getString("user");
+                
+                DataFollow dataFollow = new DataFollow(idfollow,idusers,user);
+                lista.add(dataFollow);
+            }
+            
+            return lista;
+        } catch(SQLException e) {
+            System.out.println(e.toString());
+            return null;
+        } finally {
+            try {
+                conexion.close();
+            } catch (SQLException ex) {
+                Logger.getLogger(DataUserController.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
     }
 }

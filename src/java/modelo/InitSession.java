@@ -5,10 +5,13 @@
 package modelo;
 
 import config.Conexion;
+import controlador.DataUserController;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -49,6 +52,12 @@ public class InitSession {
         } catch(SQLException e) {
             System.out.println(e.toString());
             return null;
+        } finally {
+            try {
+                conexion.close();
+            } catch (SQLException ex) {
+                Logger.getLogger(DataUserController.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
         
     }
@@ -80,6 +89,12 @@ public class InitSession {
         } catch(SQLException e) {
             System.out.println(e.toString());
             return null;
+        } finally {
+            try {
+                conexion.close();
+            } catch (SQLException ex) {
+                Logger.getLogger(DataUserController.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
         
     }

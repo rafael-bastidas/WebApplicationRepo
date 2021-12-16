@@ -33,7 +33,7 @@
                         }
                     %>
                     <div class="col-6 offset-3 text-center">
-                        <img src=<%=dataUser.getImagen()%> class="img-fluid rounded-circle" alt="FOTO_USUARIO" id="PROFILE_IMG">
+                        <img src="<%=dataUser.getImagen()%>" class="img-fluid rounded-circle" alt="FOTO_USUARIO" id="PROFILE_IMG">
                         <input id="file" type="file" accept="image/*" style="width: 0px; height: 0px;"/>
                         <input id="imagen" name="imagen" type="text" hidden/>
                         <button type="button" onclick="obtenerImagen()" class="btn btn-warning mb-3">Cambiar</button>

@@ -4,6 +4,7 @@
     Author     : Rafael Bastidas
 --%>
 
+<%@page import="modelo.DataFollow"%>
 <%@page import="modelo.DataRepositorie"%>
 <%@page import="modelo.DataRepositories"%>
 <%@page import="java.util.List"%>
@@ -15,6 +16,8 @@
     //DataUser dataUser = (DataUser) request.getAttribute("dataUser");
     DataUser dataUser = (DataUser) application.getAttribute("dataUser");
     String message = (String) request.getAttribute("message");
+    List<DataFollow> listFollow = (List<DataFollow>) request.getAttribute("listFollow");
+    List<DataFollow> listFollowers = (List<DataFollow>) request.getAttribute("listFollowers");
 
     if (dataUser == null) {
         dataUser = new DataUser(0, "", "", "", "https://thumbs.dreamstime.com/b/vector-de-usuario-redes-sociales-perfil-avatar-predeterminado-retrato-vectorial-del-176194876.jpg");
@@ -32,14 +35,14 @@
         <nav class="navbar navbar-light bg-dark">
             <div class="container-fluid">
                 <a class="navbar-brand text-white">Repo-Imagenes</a>
-                <a href="RepositoriesController?accion=updateMural" class="btn btn-light text-black-50">Ir a Mural</a>
+                <a href="RepositoriesController?accion=updateMural" class="btn btn-light text-danger">Ir a Mural</a>
                 <div class="dropdown">
                     <button class="btn btn-light dropdown-toggle text-black-50" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false">
                         Usuario
                     </button>
                     <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1" style="left: auto; right: 0;">
                         <li><a class="dropdown-item" href="SessionController?accion=deleteUser&idusers=<%=dataUser.getIdusers()%>">Eliminar cuenta</a></li>
-                        <li><a class="dropdown-item" href="index.jsp">Cerrar sesión</a></li>
+                        <li><a class="dropdown-item" href="SessionController?accion=cerrarPerfil">Cerrar sesión</a></li>
                     </ul>
                 </div>
             </div>
@@ -54,7 +57,19 @@
                 <div class="col-md-8 text-center">
                     <h4 class="text-black-50 text-start">Usuario: <%=dataUser.getUser()%></h4>
                     <p class="text-black-50  text-start">Bio: <%=dataUser.getBio()%></p>
-                    <a href="DataUserController?idusers=<%=dataUser.getIdusers()%>" class="btn btn-primary mb-3 w-100" style="background-color: #EC4B5F">Modificar</a>
+                    <a href="DataUserController?idusers=<%=dataUser.getIdusers()%>" class="btn btn-primary mb-3" style="background-color: #EC4B5F">Modificar</a>
+                    <button  class="btn btn-primary mb-3" style="background-color: #EC4B5F" data-bs-toggle="modal" data-bs-target="#exampleModal3">
+                        (<% if (listFollow == null) {
+                                out.println("0");
+                            } else {
+                                out.print(listFollow.size());
+                            } %>) Seguidos</button>
+                    <button class="btn btn-primary mb-3" style="background-color: #EC4B5F" data-bs-toggle="modal" data-bs-target="#exampleModal4">
+                        (<% if (listFollowers == null) {
+                                out.println("0");
+                            } else {
+                                out.print(listFollowers.size());
+                            }%>) Seguidores</button>
                 </div>
             </div>
             <div class="row py-3" style="background-color: #FFBB50">
@@ -187,71 +202,134 @@
             </div>
         </div>
 
+        <!-- Modal Follow -->
+        <div class="modal fade" id="exampleModal3" tabindex="-1" aria-labelledby="exampleModalLabel3" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="exampleModalLabel3">Seguidos</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+
+                        <div class="row g-3">
+                            <c:forEach items="${listFollow}" var="element">
+                                <div class="col-12 text-center">
+                                    <a href="RepositoriesController?accion=verPerfilDest&idusersdest=${element.idusers}" class="btn btn-outline-success w-100 text-center">
+                                        ${element.user}
+                                    </a>
+                                </div>
+                            </c:forEach>
+                        </div>
+
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Followers -->
+        <div class="modal fade" id="exampleModal4" tabindex="-1" aria-labelledby="exampleModalLabel4" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="exampleModalLabel4">Seguidores</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+
+                        <div class="row g-3 align-self-center">
+                            <c:forEach items="${listFollowers}" var="element">
+                                <div class="col-12 text-center">
+                                    <a href="RepositoriesController?accion=verPerfilDest&idusersdest=${element.idusers}" class="btn btn-outline-success w-100 text-center">
+                                        ${element.user}
+                                    </a>
+                                </div>
+                            </c:forEach>
+                        </div>
+
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
 
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
         <script>
-                                        const raiz_url = "http://" + window.location.host;
-                                        window.history.pushState(null, "", raiz_url + "/WebApplicationRepo/Home")
+                                            const raiz_url = "http://" + window.location.host;
+                                            window.history.pushState(null, "", raiz_url + "/WebApplicationRepo/Home")
 
-                                        const file = document.getElementById("file");
-                                        const PROFILE_IMG = document.getElementById("PROFILE_IMG");
-                                        const imagen = document.getElementById("imagen");
-                                        imagen.value = "https://cdn.pixabay.com/photo/2017/01/25/17/35/picture-2008484_960_720.png";
-                                        let FILE_PHOTO_PROFILE = "";
+                                            const file = document.getElementById("file");
+                                            const PROFILE_IMG = document.getElementById("PROFILE_IMG");
+                                            const imagen = document.getElementById("imagen");
+                                            imagen.value = "https://cdn.pixabay.com/photo/2017/01/25/17/35/picture-2008484_960_720.png";
+                                            let FILE_PHOTO_PROFILE = "";
 
-                                        file.addEventListener('change', (event) => photoProfile(event));
-                                        async function photoProfile(event) {
-                                            if (event.target.files.length > 0) {
-                                                FILE_PHOTO_PROFILE = event.target.files[0];
+                                            file.addEventListener('change', (event) => photoProfile(event));
+                                            async function photoProfile(event) {
+                                                if (event.target.files.length > 0) {
+                                                    FILE_PHOTO_PROFILE = event.target.files[0];
 
-                                                try {
-                                                    let FORM_DATA = new FormData();
-                                                    FORM_DATA.append('file_imagen', FILE_PHOTO_PROFILE);
+                                                    try {
+                                                        let FORM_DATA = new FormData();
+                                                        FORM_DATA.append('file_imagen', FILE_PHOTO_PROFILE);
 
-                                                    const REQUEST = await fetch('https://rafaelbastidas.com/apis/api-repo/app.php', {
-                                                        method: 'POST',
-                                                        body: FORM_DATA,
-                                                        headers: {
-                                                            'KEY_REPO': 'Z9AQBQXUWDHRN5GYE3DUG52BTSFT1NMA'
+                                                        const REQUEST = await fetch('https://rafaelbastidas.com/apis/api-repo/app.php', {
+                                                            method: 'POST',
+                                                            body: FORM_DATA,
+                                                            headers: {
+                                                                'KEY_REPO': 'Z9AQBQXUWDHRN5GYE3DUG52BTSFT1NMA'
+                                                            }
+                                                        })
+                                                        const RESULT = await REQUEST.json();
+                                                        console.log("Reponse backend-image", RESULT);
+                                                        if (RESULT.file_imagen_url.length > 0) {
+                                                            var promise = getBase64(FILE_PHOTO_PROFILE);
+                                                            promise.then(function (result) {
+                                                                PROFILE_IMG.setAttribute('src', result);
+                                                            });
+                                                            imagen.value = RESULT.file_imagen_url;
+                                                        } else {
+                                                            imagen.value = "https://cdn.pixabay.com/photo/2017/01/25/17/35/picture-2008484_960_720.png";
                                                         }
-                                                    })
-                                                    const RESULT = await REQUEST.json();
-                                                    console.log("Reponse backend-image", RESULT);
-                                                    if (RESULT.file_imagen_url.length > 0) {
-                                                        var promise = getBase64(FILE_PHOTO_PROFILE);
-                                                        promise.then(function (result) {
-                                                            PROFILE_IMG.setAttribute('src', result);
-                                                        });
-                                                        imagen.value = RESULT.file_imagen_url;
-                                                    } else {
+                                                    } catch (err) {
+                                                        console.error(`Hubo un problema con la petición Fetch: Error ${err.status} - ${err.statusText}`);
                                                         imagen.value = "https://cdn.pixabay.com/photo/2017/01/25/17/35/picture-2008484_960_720.png";
                                                     }
-                                                } catch (err) {
-                                                    console.error(`Hubo un problema con la petición Fetch: Error ${err.status} - ${err.statusText}`);
+                                                } else {
                                                     imagen.value = "https://cdn.pixabay.com/photo/2017/01/25/17/35/picture-2008484_960_720.png";
                                                 }
-                                            } else {
-                                                imagen.value = "https://cdn.pixabay.com/photo/2017/01/25/17/35/picture-2008484_960_720.png";
                                             }
-                                        }
-                                        function getBase64(file) {
-                                            return new Promise(function (resolve, reject) {
-                                                var reader = new FileReader();
-                                                reader.onload = function () {
-                                                    resolve(reader.result);
-                                                }
-                                                reader.onerror = reject;
-                                                reader.readAsDataURL(file);
-                                            });
-                                        }
+                                            function getBase64(file) {
+                                                return new Promise(function (resolve, reject) {
+                                                    var reader = new FileReader();
+                                                    reader.onload = function () {
+                                                        resolve(reader.result);
+                                                    }
+                                                    reader.onerror = reject;
+                                                    reader.readAsDataURL(file);
+                                                });
+                                            }
 
-                                        function configModalEditRepositorie(id, tags, url) {
-                                            console.log("idrepositorie", id, tags, url);
-                                            document.getElementById("idrepositorieEdit").value = id
-                                            document.getElementById("tagsEdit").value = tags
-                                            PROFILE_IMG.setAttribute('src', url);
-                                            imagen.value = url
-                                        }
+                                            function configModalEditRepositorie(id, tags, url) {
+                                                console.log("idrepositorie", id, tags, url);
+                                                document.getElementById("idrepositorieEdit").value = id
+                                                document.getElementById("tagsEdit").value = tags
+                                                PROFILE_IMG.setAttribute('src', url);
+                                                imagen.value = url
+                                            }
+
+            <c:if test="${dataUser.getIdusers() == 0}">
+                                            console.log("Entro")
+                                            window.location.href = raiz_url + "/WebApplicationRepo/"
+            </c:if>
         </script>
     </body>
 </html>
